@@ -1,3 +1,15 @@
+up:
+	docker-compose up
+
+down:
+	docker-compose down
+
+downv:
+	docker-compose down -v
+
+conn:
+	docker exec -it vnedreid-postgres-1 psql -U user -d tinkoff_db
+
 setup_postgres:
 	helm install my-release oci://registry-1.docker.io/bitnamicharts/postgresql -f custom-values.yaml
 
