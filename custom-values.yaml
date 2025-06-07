@@ -1,0 +1,48 @@
+global:
+  postgresql:
+    auth:
+      postgresPassword: "pass"  # Рекомендую использовать более сложный пароль
+      username: "user"
+      password: "pass"         # И здесь тоже
+      database: "tinkoff_db"
+      replicationPassword: "replpass"  # Добавьте пароль для репликации
+
+architecture: replication
+postgresql:
+  replicaCount: 2  # 1 primary + 1 replica
+  synchronousCommit: "on"
+  synchronousReplication: true
+  numSynchronousReplicas: 1  # Исправлено с 2 на 1 (см. пояснение ниже)
+  
+  # Настройки primary
+  primary:
+    persistence:
+      enabled: true  # Было "enable", должно быть "enabled"
+      size: 10Gi
+      storageClass: ""  # Укажите ваш storageClass если нужно
+    
+    # Ресурсы для primary
+    resources:
+      requests:
+        memory: 1Gi
+        cpu: 500m
+      limits:  # Рекомендую добавить limits
+        memory: 2Gi
+        cpu: 1
+  
+  # Настройки реплик
+  readReplicas:
+    persistence:
+      enabled: true  # Аналогичное исправление
+      size: 10Gi
+      storageClass: ""
+    
+    # Ресурсы для реплик
+    resources:
+      requests:
+        memory: 1Gi
+        cpu: 500m
+      limits:
+        memory: 2Gi
+        cpu: 1
+
