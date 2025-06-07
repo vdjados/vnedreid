@@ -1,35 +1,29 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: backend  # Название деплоймента
+  name: backend  
   labels:
-    app: backend  # Лейбл для связи с Service
+    app: backend  
 spec:
-  replicas: 3  # Количество реплик (подов)
+  replicas: 3  
   selector:
     matchLabels:
-      app: backend  # Должен совпадать с лейблом пода
-  template:  # Шаблон пода
+      app: backend  
+  template:  
     metadata:
       labels:
-        app: backend  # Лейбл пода
+        app: backend  
     spec:
       containers:
       - name: backend
-        image: stayfatal/backend:latest  # Образ контейнера
+        image: stayfatal/backend:latest
         imagePullPolicy: Always
         ports:
-        - containerPort: 8080  # Порт контейнера
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: backend-service  # Название сервиса
-spec:
-  selector:
-    app: backend  # Должен совпадать с лейблом Pod'ов из Deployment
-  ports:
-    - protocol: TCP
-      port: 80       # Порт, на котором Service принимает запросы
-      targetPort: 8080  # Порт контейнера (как в Pod'ах)
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: "100m"    
+            memory: "128Mi" 
+          limits:
+            cpu: "500m"    
+            memory: "512Mi" 
