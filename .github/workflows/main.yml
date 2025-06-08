@@ -1,0 +1,46 @@
+name: Build, Push & Deploy
+
+on:
+  push:
+    branches: [cluster-tgBotDeploy]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Checkout кода
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. Логин в Docker Hub
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: stayfatal
+          password: dckr_pat_DElF2i2PaFKKH6cu5LbB7xXUHHA
+
+      # 3. Сборка и пуш образа
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            stayfatal/backend:latest
+
+      # 4. Установка ZeroTier
+      - name: Install ZeroTier
+        run: |
+          curl -s https://install.zerotier.com | sudo bash
+          sudo zerotier-cli join b15644912e6e09db
+
+      # 5. Подключение по SSH и деплой
+      - name: Execute SSH command
+        uses: appleboy/ssh-action@master
+        with:
+          host: 10.147.19.70
+          username: stayfatal
+          key: 123
+          script: |
+            kubectl rollout restart deployment backend
+                
