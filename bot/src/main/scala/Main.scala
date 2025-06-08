@@ -1,9 +1,10 @@
 import com.typesafe.scalalogging.LazyLogging
 import config.BotConfig
-import commands.{StartCommand, HelpCommand}
-import spam.{SpamChecker, SpamCheckResult}
+import commands.{StartCommand, HelpCommand, SettingsCommand}
+import spam.SpamChecker
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage
 import org.telegram.telegrambots.meta.api.objects.{Message, Update}
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException
 import org.telegram.telegrambots.meta.TelegramBotsApi
@@ -23,6 +24,7 @@ object Main extends App with LazyLogging {
 class SpamBot extends TelegramLongPollingBot with LazyLogging {
   private val startCommand = new StartCommand()
   private val helpCommand = new HelpCommand()
+  private val settingsCommand = new SettingsCommand()
   private val spamChecker = new SpamChecker()
 
   override def getBotUsername: String = BotConfig.botUsername
@@ -47,30 +49,9 @@ class SpamBot extends TelegramLongPollingBot with LazyLogging {
       text match {
         case "/start" => startCommand.handleCommand(this, update)
         case "/help" => helpCommand.handleCommand(this, update)
-        case _ => checkForSpam(message)
+        case cmd if cmd.startsWith("/settings") => settingsCommand.handleCommand(this, update)
+        case _ => spamChecker.checkMessage(message, this)
       }
-    }
-  }
-
-  private def checkForSpam(message: Message): Unit = {
-    val checkResult = spamChecker.checkMessage(message)
-    
-    if (checkResult.isSpam) {
-      // Отправляем предупреждение в чат
-      val warning = new SendMessage()
-      warning.setChatId(message.getChatId.toString)
-      warning.setText(s"""
-        |⚠️ Внимание! Обнаружено подозрительное сообщение от ${message.getFrom.getUserName}:
-        |
-        |${checkResult.reason}
-        |
-        |Сообщение будет удалено через 5 секунд.
-        |""".stripMargin)
-      
-      execute[Message, SendMessage](warning)
-      
-      // TODO: Добавить удаление сообщения через 5 секунд
-      // Для этого нужно будет использовать Telegram API для удаления сообщений
     }
   }
 }
