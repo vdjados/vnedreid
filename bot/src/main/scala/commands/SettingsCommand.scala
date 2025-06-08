@@ -20,13 +20,13 @@ class SettingsCommand extends CommandHandler with LazyLogging {
     
     if (args.isEmpty) {
       // Показываем текущие настройки
-      showCurrentSettings(response)
+      showCurrentSettings(response, chatId)
     } else {
       args(0) match {
         case "window" if args.length > 1 =>
           try {
             val seconds = args(1).toInt
-            spamChecker.setMessageWindow(seconds)
+            spamChecker.setMessageWindow(chatId, seconds)
             response.setText(s"✅ Окно времени установлено на $seconds секунд")
           } catch {
             case _: NumberFormatException =>
@@ -36,12 +36,16 @@ class SettingsCommand extends CommandHandler with LazyLogging {
         case "messages" if args.length > 1 =>
           try {
             val max = args(1).toInt
-            spamChecker.setMaxMessages(max)
+            spamChecker.setMaxMessages(chatId, max)
             response.setText(s"✅ Максимальное количество сообщений установлено на $max")
           } catch {
             case _: NumberFormatException =>
               response.setText("❌ Неверный формат числа. Используйте целое положительное число.")
           }
+          
+        case "stats" =>
+          spamChecker.getSpamStats(chatId)
+          response.setText("📊 Статистика спама будет отправлена в следующем сообщении")
           
         case _ =>
           response.setText("""
@@ -50,6 +54,7 @@ class SettingsCommand extends CommandHandler with LazyLogging {
             |Доступные команды:
             |/settings window <секунды> - установить размер окна времени
             |/settings messages <количество> - установить максимальное количество сообщений
+            |/settings stats - показать статистику спама
             |
             |Примеры:
             |/settings window 15 - установить окно в 15 секунд
@@ -59,7 +64,7 @@ class SettingsCommand extends CommandHandler with LazyLogging {
     }
   }
   
-  private def showCurrentSettings(response: SendMessage): Unit = {
+  private def showCurrentSettings(response: SendMessage, chatId: Long): Unit = {
     val (window, max) = spamChecker.getSettings
     response.setText(s"""
       |⚙️ Текущие настройки антиспама:
@@ -70,6 +75,7 @@ class SettingsCommand extends CommandHandler with LazyLogging {
       |Используйте команды:
       |/settings window <секунды> - изменить окно времени
       |/settings messages <количество> - изменить лимит сообщений
+      |/settings stats - показать статистику спама
       |""".stripMargin)
   }
 } 

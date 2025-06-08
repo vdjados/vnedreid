@@ -8,6 +8,9 @@ import org.telegram.telegrambots.meta.api.objects.{Message, Update}
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException
 import spray.json._
 import DefaultJsonProtocol._
+import db.DatabaseManager
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.{Success, Failure}
 
 import java.net.URI
 import java.net.http.{HttpClient, HttpRequest, HttpResponse}
@@ -37,17 +40,45 @@ class SpamChecker extends LazyLogging {
   
   // Добавляем rate limiter для отслеживания спама сообщениями
   private val messageRateLimiter = new MessageRateLimiter()
+  
+  // Добавляем проверку ключевых слов
+  private val keywordChecker = new KeywordChecker()
+  
+  // Инициализация базы данных
+  private val db = new DatabaseManager()
+  db.init()
 
   def checkMessage(message: Message, bot: TelegramLongPollingBot): Unit = {
     val user = message.getFrom
+    val chatId = message.getChatId
+    
+    // Получаем настройки чата из базы данных
+    db.getChatSettings(chatId).onComplete {
+      case Success(Some((window, max))) =>
+        messageRateLimiter.setMessageWindow(window)
+        messageRateLimiter.setMaxMessages(max)
+      case _ => // Используем значения по умолчанию
+    }
     
     // Проверяем частоту сообщений
     if (messageRateLimiter.checkMessageRate(user.getId)) {
       logger.info(s"Detected message spam from user ${user.getUserName}")
-      handleSpamMessage(message, bot, "Слишком много сообщений за короткий промежуток времени")
+      val reason = "Слишком много сообщений за короткий промежуток времени"
+      handleSpamMessage(message, bot, reason)
+      db.logSpamEvent(chatId, user.getId, reason)
       return
     }
     
+    // Проверяем ключевые слова
+    val (isSpamByKeywords, keywordReason) = keywordChecker.checkMessage(message.getText)
+    if (isSpamByKeywords) {
+      logger.info(s"Detected spam by keywords from user ${user.getUserName}")
+      handleSpamMessage(message, bot, keywordReason.getOrElse("Обнаружены подозрительные слова"))
+      db.logSpamEvent(chatId, user.getId, keywordReason.getOrElse("Spam by keywords"))
+      return
+    }
+    
+    // Если прошли проверки, отправляем в ML
     val messageData = MessageData(
       text = message.getText,
       username = Option(user.getUserName).getOrElse(""),
@@ -154,16 +185,28 @@ class SpamChecker extends LazyLogging {
   }
 
   // Методы для настройки параметров
-  def setMessageWindow(seconds: Int): Unit = {
+  def setMessageWindow(chatId: Long, seconds: Int): Unit = {
     messageRateLimiter.setMessageWindow(seconds)
+    db.saveChatSettings(chatId, seconds, messageRateLimiter.getSettings._2)
   }
   
-  def setMaxMessages(max: Int): Unit = {
+  def setMaxMessages(chatId: Long, max: Int): Unit = {
     messageRateLimiter.setMaxMessages(max)
+    db.saveChatSettings(chatId, messageRateLimiter.getSettings._1, max)
   }
   
   def getSettings: (Int, Int) = {
     messageRateLimiter.getSettings
+  }
+  
+  def getSpamStats(chatId: Long): Unit = {
+    db.getSpamStats(chatId).onComplete {
+      case Success(stats) =>
+        // TODO: Отправить статистику в чат
+        logger.info(s"Spam stats for chat $chatId: $stats")
+      case Failure(e) =>
+        logger.error(s"Error getting spam stats: ${e.getMessage}", e)
+    }
   }
 }
 
