@@ -43,5 +43,6 @@ jobs:
       # 5. Подключение по SSH и деплой
       - name: Deploy via SSH
         run: |
-          sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USERNAME }}@10.147.19.130 "
+          sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USERNAME }}@10.147.19.87 "
           kubectl rollout restart deployment backend "
+
