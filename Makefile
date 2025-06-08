@@ -26,3 +26,10 @@ conn_postgres:
 
 forward_postgres:
 	kubectl port-forward svc/my-release-postgresql-primary 5432:5432
+
+push:
+	docker build -t stayfatal/$(target):latest --target=$(target) . --push
+
+build:
+	make push target=backend
+	make push target=ml
