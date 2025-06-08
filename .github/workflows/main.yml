@@ -33,14 +33,13 @@ jobs:
         run: |
           curl -s https://install.zerotier.com | sudo bash
           sudo zerotier-cli join b15644912e6e09db
-
+      
+      - name: Install sshpass
+        run: sudo apt-get update && sudo apt-get install -y sshpass
+      
       # 5. Подключение по SSH и деплой
-      - name: Execute SSH command
-        uses: appleboy/ssh-action@master
-        with:
-          host: 10.147.19.70
-          username: stayfatal
-          key: 123
-          script: |
-            kubectl rollout restart deployment backend
+      - name: Deploy via SSH
+        run: |
+          sshpass -p "123" ssh -o StrictHostKeyChecking=no stayfatal@10.147.19.70 
+          kubectl rollout restart deployment backend
                 
