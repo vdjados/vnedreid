@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"io"
 	"log"
 	"net/http"
 
@@ -17,7 +18,19 @@ func main() {
 	log.Println(db.Ping())
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		log.Println("Test")
+		resp, err := http.Get("http://ml-service/")
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		buf, err := io.ReadAll(resp.Body)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		log.Println(string(buf))
 	})
 
 	http.ListenAndServe(":8080", http.DefaultServeMux)

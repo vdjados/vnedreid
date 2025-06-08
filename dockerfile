@@ -8,12 +8,22 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -o app main.go
+RUN go build -o backendapp ./backend/main.go
 
-FROM alpine
+RUN go build -o mlapp ./ml/main.go
+
+FROM alpine AS backend
 
 WORKDIR /app
 
-COPY --from=builder /app/app .
+COPY --from=builder /app/backendapp .
 
-ENTRYPOINT ["./app"]
+ENTRYPOINT ["./backendapp"]
+
+FROM alpine AS ml
+
+WORKDIR /app
+
+COPY --from=builder /app/mlapp .
+
+ENTRYPOINT ["./mlapp"]
